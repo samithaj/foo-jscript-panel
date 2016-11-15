@@ -399,6 +399,7 @@ public:
 	STDMETHODIMP GetSelectionType(UINT* p);
 	STDMETHODIMP GetSelections(UINT flags, IFbMetadbHandleList** pp);
 	STDMETHODIMP IsLibraryEnabled(VARIANT_BOOL* p);
+	STDMETHODIMP IsMainMenuCommandChecked(BSTR command, VARIANT_BOOL* p);
 	STDMETHODIMP IsMetadbInMediaLibrary(IFbMetadbHandle* handle, VARIANT_BOOL* p);
 	STDMETHODIMP LoadPlaylist();
 	STDMETHODIMP Next();

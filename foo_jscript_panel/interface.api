@@ -24,6 +24,7 @@ fb.GetSelection()
 fb.GetSelections([flags])
 fb.GetSelectionType()
 fb.IsLibraryEnabled();
+fb.IsMainMenuCommandChecked(command);
 fb.IsMetadbInMediaLibrary(handle)
 fb.IsPaused
 fb.IsPlaying
