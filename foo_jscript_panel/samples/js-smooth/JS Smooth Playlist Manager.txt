@@ -1,7 +1,7 @@
 // ==PREPROCESSOR==
 // @name "JS Smooth Playlist Manager"
-// @version "20151115-1000-151"
-// @author "Br3tt aka Falstaff >> http://br3tt.deviantart.com"
+// @version "2018-mod"
+// @author "Br3tt aka Falstaff"
 // @feature "dragdrop"
 // @import "%fb2k_component_path%samples\js-smooth\js\JScommon.js"
 // @import "%fb2k_component_path%samples\js-smooth\js\JSinputbox.js"
@@ -9,8 +9,6 @@
 // ==/PREPROCESSOR==
 
 /*
-a jscript for the component "JScript Panel" v1.0.0 or better
-
 [Features]
  * order playlists by dragging items with the mouse
  * presets autoplaylists available
@@ -23,17 +21,14 @@ a jscript for the component "JScript Panel" v1.0.0 or better
  * Windows scaling compliant (you can adjust zoom size in real time with CTRL+mousewheel)
  * Custom Panel Colors (in Properties window)
  * ... and more!
-[/Features]
 
 [Requirements]
- * Windows Vista, 7, 8 or 10
- * foobar2000 v1.3 or better >> http://www.foobar2000.org
- * component "JScript Panel" 1.0.0 or better >> https://github.com/19379/foo-jscript-panel/releases
-[/Requirements]
+ * foobar2000 v1.4 or later >> https://www.foobar2000.org
+ * Windows version is no longer important. Even XP is supported.
+ * JScript Panel v2.0.0 or later >> https://github.com/marc2k3/foo_jscript_panel
 
 [Installation]
- * import/paste the main script into a "JScript Panel" instance of your foobar2000 layout (DUI or CUI)
-[/Installation]
+ * import/paste the main JSPlaylist script into a JScript Panel instance of your foobar2000 layout (DUI or CUI)
 
 [Tips]
  * Hold SHIFT key + right click to display Configure script and panel Properties entries
@@ -47,5 +42,4 @@ a jscript for the component "JScript Panel" v1.0.0 or better
  * Hold SHIFT + Mouse Wheel to scale group header and so the cover art size 
  * F2 key to rename selected/active playlist
  * ... etc
-[/Tips]
 */

@@ -168,7 +168,7 @@ _.mixin({
 		this.rbtn_up_done = function (idx) {
 			switch (idx) {
 			case 5000:
-				_.save(this.cb, this.filename);
+				_.save(this.filename, this.cb);
 				this.artist = '';
 				panel.item_focus_change();
 				break;
@@ -293,7 +293,7 @@ _.mixin({
 						.stripTags()
 						.value();
 					console.log(content.length ? 'A review was found and saved.' : 'No review was found on the page for this album.');
-					_.save(content, f);
+					_.save(f, content);
 					this.artist = '';
 					panel.item_focus_change();
 				} else {
@@ -317,7 +317,7 @@ _.mixin({
 							this.get();
 						} else {
 							console.log('Could not match artist/album on the Allmusic website.');
-							_.save('', f);
+							_.save(f, '');
 						}
 					} catch (e) {
 						console.log('Could not parse Allmusic server response.');
@@ -325,7 +325,7 @@ _.mixin({
 				}
 				break;
 			case 'lastfm_bio':
-				_.save(this.xmlhttp.responseText, f);
+				_.save(f, this.xmlhttp.responseText);
 				this.artist = '';
 				panel.item_focus_change();
 				break;

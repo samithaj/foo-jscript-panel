@@ -10,7 +10,6 @@ function on_mouse_lbtn_down(x, y) {
 	var _child = window.CreatePopupMenu();
 	var idx;
 	
-	// MF_STRING is defined in docs\flags.txt
 	// start index at 1, NOT 0
 	_basemenu.AppendMenuItem(MF_STRING, 1, 'item1');
 	_basemenu.AppendMenuItem(MF_STRING, 2, 'item2');

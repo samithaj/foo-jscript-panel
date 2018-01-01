@@ -1,7 +1,10 @@
 _.mixin({
 	listenbrainz : function (x, y, size) {
-		this.playback_new_track = function () {
-			this.metadb = fb.GetNowPlaying();
+		this.playback_new_track = function (metadb) {
+			if (!metadb) {
+				return;
+			}
+			this.metadb = metadb;
 			this.time_elapsed = 0;
 			this.timestamp = _.ts();
 			this.target_time = this.properties.listenbrainz.enabled ? Math.min(Math.ceil(fb.PlaybackLength / 2), 240) : -1;
@@ -84,7 +87,7 @@ _.mixin({
 				console.log('Submitting ' + _.q(tags.artist + ' - ' + tags.title));
 				
 				if (this.properties.show.enabled) {
-					fb.Trace(JSON.stringify(payload, null, 4));
+					console.log(JSON.stringify(payload, null, 4));
 				}
 			}
 			
@@ -176,9 +179,9 @@ _.mixin({
 		
 		this.cache = function (data) {
 			var tmp = this.open_cache();
-			tmp.unshift(data.payload[0]);
+			tmp.push(data.payload[0]);
 			console.log('Cache contains ' + tmp.length + ' listen(s).');
-			_.save(JSON.stringify(tmp), this.cache_file);
+			_.save(this.cache_file, JSON.stringify(tmp));
 		}
 		
 		this.open_cache = function () {
@@ -271,13 +274,12 @@ _.mixin({
 		}
 		
 		_.createFolder(folders.data);
-		_.createFolder(folders.settings);
 		this.x = x;
 		this.y = y;
 		this.size = size;
 		this.cache_is_bad = false;
 		this.cache_file = folders.data + 'listenbrainz.json';
-		this.ini_file = folders.settings + 'listenbrainz.ini';
+		this.ini_file = folders.data + 'listenbrainz.ini';
 		this.token = utils.ReadINI(this.ini_file, 'Listenbrainz', 'token');
 		this.username = utils.ReadINI(this.ini_file, 'Listenbrainz', 'username');
 		this.xmlhttp = new ActiveXObject('Microsoft.XMLHTTP');

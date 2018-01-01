@@ -1,3 +1,7 @@
+if (!("now" in Date)) {
+	fb.ShowPopupMessage("This script requires a system with IE9 or later installed. Also, the 'Script Engine' must be set to 'Chakra' in the 'Configuration Window'.");
+}
+
 Array.prototype.srt=function(){for(var z=0,t;t=this[z];z++){this[z]=[];var x=0,y=-1,n=true,i,j;while(i=(j=t.charAt(x++)).charCodeAt(0)){var m=(i==46||(i>=48&&i<=57));if(m!==n){this[z][++y]='';n=m;}
 this[z][y]+=j;}}
 this.sort(function(a,b){for(var x=0,aa,bb;(aa=a[x])&&(bb=b[x]);x++){aa=aa.toLowerCase();bb=bb.toLowerCase();if(aa!==bb){var c=Number(aa),d=Number(bb);if(c==aa&&d==bb){return c-d;}else return(aa>bb)?1:-1;}}
@@ -375,10 +379,6 @@ _.mixin({
 		s4.AppendTo(m1, MF_STRING, 'Playback');
 		s5.AppendTo(m1, MF_STRING, 'Library');
 		s6.AppendTo(m1, MF_STRING, 'Help');
-		if (_.cc('foo_ui_hacks') && _.cc('foo_ui_columns')) {
-			m1.AppendMenuSeparator();
-			m1.AppendMenuItem(MF_STRING, 1, 'Switch UI');
-		}
 		var idx = m1.TrackPopupMenu(x, y, flags);
 		switch (true) {
 		case idx == 0:
@@ -469,17 +469,12 @@ _.mixin({
 		} catch (e) {
 		}
 	},
-	save : function (value, file) {
-		try {
-			if (!_.isFolder(utils.FileTest(file, 'split').toArray()[0])) {
-				return false;
-			}
-			var ts = fso.OpenTextFile(file, 2, true, -1);
-			ts.WriteLine(value);
-			ts.Close();
-			return true;
-		} catch (e) {
-			return false;
+	save : function (file, value) {
+		if (!_.isFolder(utils.FileTest(file, 'split').toArray()[0])) {
+			return;
+		}
+		if (!utils.WriteTextFile(file, value)) {
+			console.log('Error saving to ' + file);
 		}
 	},
 	sb : function (t, x, y, w, h, v, fn) {
@@ -639,24 +634,17 @@ var DEFAULT_ARTIST = '$meta(artist,0)';
 var DPI = WshShell.RegRead('HKCU\\Control Panel\\Desktop\\WindowMetrics\\AppliedDPI');
 
 var LM = _.scale(5);
-var TM = _.scale(16);
+var TM = _.scale(20);
 
 var tooltip = window.CreateTooltip('Segoe UI', _.scale(12));
 tooltip.SetMaxWidth(1200);
 
 var folders = {};
-folders.images = fb.ComponentPath + 'samples\\complete\\images\\';
-folders.settings = fb.ProfilePath + 'js_settings\\';
+folders.home = fb.ComponentPath + 'samples\\complete\\';
+folders.images = folders.home + 'images\\';
 folders.data = fb.ProfilePath + 'js_data\\';
 folders.artists = folders.data + 'artists\\';
 folders.lastfm = folders.data + 'lastfm\\';
-
-var console = {
-	pre : '',
-	log : function (text) {
-		fb.Trace(this.pre + text);
-	}
-};
 
 var guifx = {
 	font : 'Guifx v2 Transports',

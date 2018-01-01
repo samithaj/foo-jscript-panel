@@ -22,10 +22,11 @@ HRESULT js_panel_window::script_invoke_v(int callbackId, VARIANTARG* argv, UINT 
 	return m_script_host->InvokeCallback(callbackId, argv, argc, ret);
 }
 
-void js_panel_window::update_script(const char* code)
+void js_panel_window::update_script(const char* name, const char* code)
 {
-	if (code)
+	if (name && code)
 	{
+		get_script_engine() = name;
 		get_script_code() = code;
 	}
 
@@ -49,7 +50,7 @@ LRESULT js_panel_window::on_message(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		// Interfaces
 		m_gr_wrap.Attach(new com_object_impl_t<GdiGraphics>(), false);
 		panel_manager::instance().add_window(m_hwnd);
-		delay_loader::g_enqueue(new delay_script_init_action(m_hwnd));
+		script_load();
 	}
 	return 0;
 
@@ -218,8 +219,8 @@ LRESULT js_panel_window::on_message(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		on_always_on_top_changed(wp);
 		return 0;
 
-	case CALLBACK_UWM_COLORS_CHANGED:
-		on_colors_changed();
+	case CALLBACK_UWM_COLOURS_CHANGED:
+		on_colours_changed();
 		return 0;
 
 	case CALLBACK_UWM_CURSOR_FOLLOW_PLAYBACK:
@@ -386,20 +387,12 @@ LRESULT js_panel_window::on_message(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		}
 		return 0;
 
-	case UWM_SCRIPT_INIT:
-		script_load();
-		return 0;
-
 	case UWM_SCRIPT_TERM:
 		script_unload();
 		return 0;
 
 	case UWM_REFRESHBK:
 		Redraw();
-		return 0;
-
-	case UWM_REFRESHBKDONE:
-		on_refresh_background_done();
 		return 0;
 
 	case UWM_SHOWCONFIGURE:
@@ -611,9 +604,9 @@ void js_panel_window::on_changed_sorted(WPARAM wp)
 		handles->Release();
 }
 
-void js_panel_window::on_colors_changed()
+void js_panel_window::on_colours_changed()
 {
-	script_invoke_v(CallbackIds::on_colors_changed);
+	script_invoke_v(CallbackIds::on_colours_changed);
 }
 
 void js_panel_window::on_context_menu(int x, int y)
@@ -1173,11 +1166,6 @@ void js_panel_window::on_playlist_switch()
 void js_panel_window::on_playlists_changed()
 {
 	script_invoke_v(CallbackIds::on_playlists_changed);
-}
-
-void js_panel_window::on_refresh_background_done()
-{
-	script_invoke_v(CallbackIds::on_refresh_background_done);
 }
 
 void js_panel_window::on_selection_changed()

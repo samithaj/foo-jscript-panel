@@ -48,7 +48,6 @@ public:
 	GUID GetGUID();
 	HDC GetHDC();
 	HWND GetHWND();
-	IGdiBitmap* GetBackgroundImage();
 	INT GetHeight();
 	INT GetWidth();
 	POINT& MaxSize();
@@ -59,8 +58,8 @@ public:
 	t_script_info& ScriptInfo();
 	unsigned SetInterval(IDispatch* func, INT delay);
 	unsigned SetTimeout(IDispatch* func, INT delay);
-	virtual DWORD GetColorCUI(unsigned type, const GUID& guid) = 0;
-	virtual DWORD GetColorDUI(unsigned type) = 0;
+	virtual DWORD GetColourCUI(unsigned type, const GUID& guid) = 0;
+	virtual DWORD GetColourDUI(unsigned type) = 0;
 	virtual HFONT GetFontCUI(unsigned type, const GUID& guid) = 0;
 	virtual HFONT GetFontDUI(unsigned type) = 0;
 	void ClearIntervalOrTimeout(UINT timerId);
@@ -81,7 +80,7 @@ public:
 	bool Ready();
 
 	HRESULT GenerateSourceContext(const wchar_t* path, const wchar_t* code, DWORD& source_context);
-	HRESULT InitScriptEngine();
+	HRESULT InitScriptEngineByName(const wchar_t* engineName);
 	HRESULT Initialize();
 	HRESULT InvokeCallback(int callbackId, VARIANTARG* argv = NULL, UINT argc = 0, VARIANT* ret = NULL);
 	HRESULT ProcessImportedScripts(script_preprocessor& preprocessor, IActiveScriptParsePtr& parser);
@@ -113,6 +112,7 @@ private:
 	IFbWindowPtr m_window;
 	IGdiUtilsPtr m_gdi;
 	IJSUtilsPtr m_utils;
+	IJSConsolePtr m_console;
 	ScriptCallbackInvoker m_callback_invoker;
 	bool m_engine_inited;
 	bool m_has_error;
@@ -139,9 +139,8 @@ public:
 	STDMETHODIMP CreatePopupMenu(IMenuObj** pp);
 	STDMETHODIMP CreateThemeManager(BSTR classid, IThemeManager** pp);
 	STDMETHODIMP CreateTooltip(BSTR name, float pxSize, INT style, IFbTooltip** pp);
-	STDMETHODIMP GetBackgroundImage(IGdiBitmap** pp);
-	STDMETHODIMP GetColorCUI(UINT type, BSTR guidstr, int* p);
-	STDMETHODIMP GetColorDUI(UINT type, int* p);
+	STDMETHODIMP GetColourCUI(UINT type, BSTR guidstr, int* p);
+	STDMETHODIMP GetColourDUI(UINT type, int* p);
 	STDMETHODIMP GetFontCUI(UINT type, BSTR guidstr, IGdiFont** pp);
 	STDMETHODIMP GetFontDUI(UINT type, IGdiFont** pp);
 	STDMETHODIMP GetProperty(BSTR name, VARIANT defaultval, VARIANT* p);

@@ -2,11 +2,8 @@
 
 namespace stats
 {
-	static const GUID guid_js_panel_index_playcount = { 0x2d6e21e9, 0xf079, 0x474d,{ 0xa8, 0x2d, 0xf8, 0x9a, 0x34, 0xbc, 0xf7, 0xbf } };
-	static const GUID guid_js_panel_index_loved = { 0xabb2b357, 0xf21f, 0x4c08,{ 0xa1, 0xd7, 0x53, 0x76, 0xcd, 0xe7, 0xe2, 0x51 } };
-
+	static const GUID guid_js_panel_index = { 0x835f0b63, 0xd96c, 0x447b,{ 0x9c, 0xcb, 0x71, 0x4f, 0xa8, 0x30, 0x49, 0x11 } };
 	static const char strPinTo[] = "%artist% - %title%";
-	static const char strPropertiesGroup[] = JSP_NAME;
 	static const t_filetimestamp retentionPeriod = system_time_periods::week * 4;
 
 	static titleformat_object::ptr makeKeyObj(const char * pinTo)
@@ -39,13 +36,11 @@ namespace stats
 				static_api_ptr_t<metadb_index_manager> api;
 				try
 				{
-					api->add(g_client, guid_js_panel_index_playcount, retentionPeriod);
-					api->add(g_client, guid_js_panel_index_loved, retentionPeriod);
+					api->add(g_client, guid_js_panel_index, retentionPeriod);
 				}
 				catch (std::exception const & e)
 				{
-					api->remove(guid_js_panel_index_playcount);
-					api->remove(guid_js_panel_index_loved);
+					api->remove(guid_js_panel_index);
 					FB2K_console_formatter() << JSP_NAME << " stats: Critical initialisation failure: " << e;
 					return;
 				}
@@ -57,33 +52,42 @@ namespace stats
 
 	typedef uint32_t stats_t;
 	static const stats_t stats_invalid = 0;
-
-	static stats_t get_playcount(metadb_index_hash hash, static_api_ptr_t<metadb_index_manager> & api)
+	struct fields
 	{
 		stats_t playcount;
-		if (api->get_user_data_here(guid_js_panel_index_playcount, hash, &playcount, sizeof(playcount)) != sizeof(playcount)) return stats_invalid;
-		return playcount;
-	}
-
-	static void set_playcount(metadb_index_hash hash, stats_t playcount)
-	{
-		static_api_ptr_t<metadb_index_manager> api;
-		api->set_user_data(guid_js_panel_index_playcount, hash, &playcount, sizeof(playcount));
-		static_api_ptr_t<metadb_index_manager>()->dispatch_refresh(guid_js_panel_index_playcount, hash);
-	}
+		stats_t loved;
+	};
 
 	static stats_t get_loved(metadb_index_hash hash, static_api_ptr_t<metadb_index_manager> & api)
 	{
-		stats_t loved;
-		if (api->get_user_data_here(guid_js_panel_index_loved, hash, &loved, sizeof(loved)) != sizeof(loved)) return stats_invalid;
-		return loved;
+		fields tmp;
+		return api->get_user_data_here(guid_js_panel_index, hash, &tmp, sizeof(tmp)) == sizeof(tmp) ? tmp.loved : stats_invalid;
+	}
+
+	static stats_t get_playcount(metadb_index_hash hash, static_api_ptr_t<metadb_index_manager> & api)
+	{
+		fields tmp;
+		return api->get_user_data_here(guid_js_panel_index, hash, &tmp, sizeof(tmp)) == sizeof(tmp) ? tmp.playcount : stats_invalid;
 	}
 
 	static void set_loved(metadb_index_hash hash, stats_t loved)
 	{
 		static_api_ptr_t<metadb_index_manager> api;
-		api->set_user_data(guid_js_panel_index_loved, hash, &loved, sizeof(loved));
-		static_api_ptr_t<metadb_index_manager>()->dispatch_refresh(guid_js_panel_index_loved, hash);
+		fields tmp;
+		tmp.loved = loved;
+		tmp.playcount = get_playcount(hash, api);
+		api->set_user_data(guid_js_panel_index, hash, &tmp, sizeof(tmp));
+		api->dispatch_refresh(guid_js_panel_index, hash);
+	}
+
+	static void set_playcount(metadb_index_hash hash, stats_t playcount)
+	{
+		static_api_ptr_t<metadb_index_manager> api;
+		fields tmp;
+		tmp.loved = get_loved(hash, api);
+		tmp.playcount = playcount;
+		api->set_user_data(guid_js_panel_index, hash, &tmp, sizeof(tmp));
+		api->dispatch_refresh(guid_js_panel_index, hash);
 	}
 
 	class metadb_display_field_provider_impl : public metadb_display_field_provider
@@ -98,10 +102,10 @@ namespace stats
 			switch (index)
 			{
 			case 0:
-				out = "jsp_playcount";
+				out = "jsp_loved";
 				break;
 			case 1:
-				out = "jsp_loved";
+				out = "jsp_playcount";
 				break;
 			}
 		}
@@ -112,23 +116,15 @@ namespace stats
 
 			static_api_ptr_t<metadb_index_manager> api;
 
-			switch (index)
+			if (index < get_field_count())
 			{
-			case 0:
-				{
-					stats_t playcount = get_playcount(hash, api);
-					if (playcount == stats_invalid) return false;
-					out->write_int(titleformat_inputtypes::meta, playcount);
-					return true;
-				}
-			case 1:
-				{
-					stats_t loved = get_loved(hash, api);
-					if (loved == stats_invalid) return false;
-					out->write_int(titleformat_inputtypes::meta, loved);
-					return true;
-				}
-			default:
+				stats_t value = index == 0 ? get_loved(hash, api) : get_playcount(hash, api);
+				if (value == stats_invalid) return false;
+				out->write_int(titleformat_inputtypes::meta, value);
+				return true;
+			}
+			else
+			{
 				return false;
 			}
 		}
@@ -140,37 +136,47 @@ namespace stats
 	public:
 		void enumerate_properties(metadb_handle_list_cref p_tracks, track_property_callback & p_out)
 		{
-			pfc::avltree_t<metadb_index_hash> hashes;
+			static_api_ptr_t<metadb_index_manager> api;
 			const size_t trackCount = p_tracks.get_count();
-			for (size_t trackWalk = 0; trackWalk < trackCount; ++trackWalk)
+
+			if (trackCount == 1)
 			{
 				metadb_index_hash hash;
-				if (g_client->hashHandle(p_tracks[trackWalk], hash))
+				if (g_client->hashHandle(p_tracks[0], hash))
 				{
-					hashes += hash;
+					p_out.set_property(JSP_NAME, 0, "Playcount", pfc::format_uint(get_playcount(hash, api)));
+					p_out.set_property(JSP_NAME, 1, "Loved", get_loved(hash, api) == stats_invalid ? "No" : "Yes");
 				}
 			}
-
-			static_api_ptr_t<metadb_index_manager> api;
-			uint64_t total = 0;
-			for (auto i = hashes.first(); i.is_valid(); ++i)
+			else
 			{
-				auto p = get_playcount(*i, api);
-				if (p != stats_invalid)
+				pfc::avltree_t<metadb_index_hash> hashes;
+
+				for (size_t trackWalk = 0; trackWalk < trackCount; ++trackWalk)
 				{
-					total += p;
+					metadb_index_hash hash;
+					if (g_client->hashHandle(p_tracks[trackWalk], hash))
+					{
+						hashes += hash;
+					}
 				}
-			}
 
-			if (total > 0)
-			{
-				p_out.set_property(strPropertiesGroup, 0, "Playcount", pfc::format_uint(total));
+				uint64_t total = 0;
+				for (auto i = hashes.first(); i.is_valid(); ++i)
+				{
+					total += get_playcount(*i, api);
+				}
+
+				if (total > 0)
+				{
+					p_out.set_property(JSP_NAME, 0, "Playcount", pfc::format_uint(total));
+				}
 			}
 		}
 
 		void enumerate_properties_v2(metadb_handle_list_cref p_tracks, track_property_callback_v2 & p_out)
 		{
-			if (p_out.is_group_wanted(strPropertiesGroup))
+			if (p_out.is_group_wanted(JSP_NAME))
 			{
 				enumerate_properties(p_tracks, p_out);
 			}

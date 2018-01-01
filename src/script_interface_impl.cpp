@@ -1,11 +1,7 @@
 #include "stdafx.h"
 #include "script_interface_impl.h"
-#include "boxblurfilter.h"
 #include "stackblur.h"
 #include "popup_msg.h"
-#ifdef JSP_STATS
-#include "stats.h"
-#endif
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -28,9 +24,8 @@ STDMETHODIMP ContextMenuManager::BuildMenu(IMenuObj* p, int base_id, int max_id)
 	if (m_cm.is_empty()) return E_POINTER;
 
 	UINT menuid;
-	contextmenu_node* parent = parent = m_cm->get_root();
-
 	p->get_ID(&menuid);
+	contextmenu_node* parent = m_cm->get_root();
 	m_cm->win32_build_menu((HMENU)menuid, parent, base_id, max_id);
 	return S_OK;
 }
@@ -43,36 +38,12 @@ STDMETHODIMP ContextMenuManager::ExecuteByID(UINT id, VARIANT_BOOL* p)
 	return S_OK;
 }
 
-STDMETHODIMP ContextMenuManager::InitContext(VARIANT handle)
+STDMETHODIMP ContextMenuManager::InitContext(IFbMetadbHandleList* handles)
 {
-	if (handle.vt != VT_DISPATCH || !handle.pdispVal) return E_INVALIDARG;
-
-	metadb_handle_list handle_list;
-	IDispatch* temp = NULL;
-	IDispatchPtr handle_s = NULL;
-	void* ptr = NULL;
-
-	if (SUCCEEDED(handle.pdispVal->QueryInterface(__uuidof(IFbMetadbHandle), (void**)&temp)))
-	{
-		handle_s = temp;
-		reinterpret_cast<IFbMetadbHandle *>(handle_s.GetInterfacePtr())->get__ptr(&ptr);
-		if (!ptr) return E_INVALIDARG;
-		handle_list = pfc::list_single_ref_t<metadb_handle_ptr>(reinterpret_cast<metadb_handle *>(ptr));
-	}
-	else if (SUCCEEDED(handle.pdispVal->QueryInterface(__uuidof(IFbMetadbHandleList), (void**)&temp)))
-	{
-		handle_s = temp;
-		reinterpret_cast<IFbMetadbHandleList *>(handle_s.GetInterfacePtr())->get__ptr(&ptr);
-		if (!ptr) return E_INVALIDARG;
-		handle_list = *reinterpret_cast<metadb_handle_list *>(ptr);
-	}
-	else
-	{
-		return E_INVALIDARG;
-	}
-
+	metadb_handle_list* handles_ptr = NULL;
+	handles->get__ptr((void**)&handles_ptr);
 	contextmenu_manager::g_create(m_cm);
-	m_cm->init_context(handle_list, contextmenu_manager::flag_show_shortcuts);
+	m_cm->init_context(*handles_ptr, contextmenu_manager::flag_show_shortcuts);
 	return S_OK;
 }
 
@@ -323,6 +294,7 @@ STDMETHODIMP FbMetadbHandle::GetFileInfo(IFbFileInfo** pp)
 }
 
 #ifdef JSP_STATS
+#include "stats.h"
 STDMETHODIMP FbMetadbHandle::SetLoved(UINT loved)
 {
 	if (m_handle.is_empty()) return E_POINTER;
@@ -627,8 +599,6 @@ STDMETHODIMP FbMetadbHandleList::UpdateFileInfoFromJSON(BSTR str)
 	t_size count = m_handles.get_count();
 	if (count == 0) return E_POINTER;
 
-	if (!str) return E_INVALIDARG;
-
 	json o;
 	bool is_array;
 
@@ -838,14 +808,6 @@ STDMETHODIMP FbPlaylistManager::CreateAutoPlaylist(UINT idx, BSTR name, BSTR que
 	return S_OK;
 }
 
-STDMETHODIMP FbPlaylistManager::CreatePlaybackQueueItem(IFbPlaybackQueueItem** outPlaybackQueueItem)
-{
-	if (!outPlaybackQueueItem) return E_POINTER;
-
-	*outPlaybackQueueItem = new com_object_impl_t<FbPlaybackQueueItem>();
-	return S_OK;
-}
-
 STDMETHODIMP FbPlaylistManager::CreatePlaylist(UINT playlistIndex, BSTR name, UINT* outPlaylistIndex)
 {
 	if (!outPlaylistIndex) return E_POINTER;
@@ -929,44 +891,18 @@ STDMETHODIMP FbPlaylistManager::FlushPlaybackQueue()
 	return S_OK;
 }
 
-STDMETHODIMP FbPlaylistManager::GetPlaybackQueueContents(VARIANT* outContents)
+STDMETHODIMP FbPlaylistManager::GetPlaybackQueueHandles(IFbMetadbHandleList** outItems)
 {
-	if (!outContents) return E_POINTER;
+	if (!outItems) return E_POINTER;
 
+	metadb_handle_list items;
 	pfc::list_t<t_playback_queue_item> contents;
-	helpers::com_array_writer<> arrayWriter;
-
 	static_api_ptr_t<playlist_manager>()->queue_get_contents(contents);
-
-	if (!arrayWriter.create(contents.get_count()))
-	{
-		return E_OUTOFMEMORY;
-	}
-
 	for (t_size i = 0; i < contents.get_count(); ++i)
 	{
-		_variant_t var;
-		var.vt = VT_DISPATCH;
-		var.pdispVal = new com_object_impl_t<FbPlaybackQueueItem>(contents[i]);
-
-		if (FAILED(arrayWriter.put(i, var)))
-		{
-			// deep destroy
-			arrayWriter.reset();
-			return E_OUTOFMEMORY;
-		}
+		items.add_item(contents[i].m_handle);
 	}
-
-	outContents->vt = VT_ARRAY | VT_VARIANT;
-	outContents->parray = arrayWriter.get_ptr();
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaylistManager::GetPlaybackQueueCount(UINT* outCount)
-{
-	if (!outCount) return E_POINTER;
-
-	*outCount = static_api_ptr_t<playlist_manager>()->queue_get_count();
+	*outItems = new com_object_impl_t<FbMetadbHandleList>(items);
 	return S_OK;
 }
 
@@ -1049,14 +985,6 @@ STDMETHODIMP FbPlaylistManager::IsAutoPlaylist(UINT idx, VARIANT_BOOL* p)
 		*p = VARIANT_FALSE;
 	}
 
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaylistManager::IsPlaybackQueueActive(VARIANT_BOOL* outIsActive)
-{
-	if (!outIsActive) return E_POINTER;
-
-	*outIsActive = TO_VARIANT_BOOL(static_api_ptr_t<playlist_manager>()->queue_is_active());
 	return S_OK;
 }
 
@@ -1357,90 +1285,6 @@ STDMETHODIMP FbPlaylistManager::put_PlayingPlaylist(int playlistIndex)
 	static_api_ptr_t<playlist_manager> api;
 	t_size index = playlistIndex > -1 ? playlistIndex : pfc::infinite_size;
 	api->set_playing_playlist(index);
-	return S_OK;
-}
-
-FbPlaybackQueueItem::FbPlaybackQueueItem()
-{
-}
-
-FbPlaybackQueueItem::FbPlaybackQueueItem(const t_playback_queue_item& playbackQueueItem)
-{
-	m_playback_queue_item.m_handle = playbackQueueItem.m_handle;
-	m_playback_queue_item.m_playlist = playbackQueueItem.m_playlist;
-	m_playback_queue_item.m_item = playbackQueueItem.m_item;
-}
-
-FbPlaybackQueueItem::~FbPlaybackQueueItem()
-{
-}
-
-void FbPlaybackQueueItem::FinalRelease()
-{
-	m_playback_queue_item.m_handle.release();
-	m_playback_queue_item.m_playlist = 0;
-	m_playback_queue_item.m_item = 0;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::Equals(IFbPlaybackQueueItem* item, VARIANT_BOOL* outEquals)
-{
-	if (!outEquals) return E_POINTER;
-
-	t_playback_queue_item* ptrQueueItem = NULL;
-	item->get__ptr((void**)&ptrQueueItem);
-	*outEquals = TO_VARIANT_BOOL(m_playback_queue_item == *ptrQueueItem);
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::get_Handle(IFbMetadbHandle** outHandle)
-{
-	if (!outHandle) return E_POINTER;
-
-	*outHandle = new com_object_impl_t<FbMetadbHandle>(m_playback_queue_item.m_handle);
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::get_PlaylistIndex(UINT* outPlaylistIndex)
-{
-	if (!outPlaylistIndex) return E_POINTER;
-
-	*outPlaylistIndex = m_playback_queue_item.m_playlist;
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::get_PlaylistItemIndex(UINT* outItemIndex)
-{
-	if (!outItemIndex) return E_POINTER;
-
-	*outItemIndex = m_playback_queue_item.m_item;
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::get__ptr(void** pp)
-{
-	if (!pp) return E_POINTER;
-
-	*pp = &m_playback_queue_item;
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::put_Handle(IFbMetadbHandle* handle)
-{
-	metadb_handle* ptr = NULL;
-	handle->get__ptr((void**)&ptr);
-	m_playback_queue_item.m_handle = ptr;
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::put_PlaylistIndex(UINT playlistIndex)
-{
-	m_playback_queue_item.m_playlist = playlistIndex;
-	return S_OK;
-}
-
-STDMETHODIMP FbPlaybackQueueItem::put_PlaylistItemIndex(UINT itemIndex)
-{
-	m_playback_queue_item.m_item = itemIndex;
 	return S_OK;
 }
 
@@ -2215,41 +2059,6 @@ STDMETHODIMP FbUtils::TitleFormat(BSTR expression, IFbTitleFormat** pp)
 	return S_OK;
 }
 
-STDMETHODIMP FbUtils::Trace(SAFEARRAY* p)
-{
-	pfc::string8_fast str;
-	LONG nLBound = 0, nUBound = -1;
-	HRESULT hr;
-
-	if (FAILED(hr = SafeArrayGetLBound(p, 1, &nLBound)))
-		return hr;
-
-	if (FAILED(hr = SafeArrayGetUBound(p, 1, &nUBound)))
-		return hr;
-
-	for (LONG i = nLBound; i <= nUBound; ++i)
-	{
-		_variant_t var;
-		LONG n = i;
-
-		if (FAILED(SafeArrayGetElement(p, &n, &var)))
-			continue;
-
-		if (FAILED(hr = VariantChangeType(&var, &var, VARIANT_ALPHABOOL, VT_BSTR)))
-			continue;
-
-		str.add_string(pfc::stringcvt::string_utf8_from_wide(var.bstrVal));
-
-		if (i < nUBound)
-		{
-			str.add_byte(' ');
-		}
-	}
-
-	console::info(str);
-	return S_OK;
-}
-
 STDMETHODIMP FbUtils::VolumeDown()
 {
 	standard_commands::main_volume_down();
@@ -2523,16 +2332,6 @@ STDMETHODIMP GdiBitmap::ApplyMask(IGdiBitmap* mask, VARIANT_BOOL* p)
 	return S_OK;
 }
 
-STDMETHODIMP GdiBitmap::BoxBlur(int radius, int iteration)
-{
-	if (!m_ptr) return E_POINTER;
-
-	box_blur_filter bbf;
-	bbf.set_op(radius, iteration);
-	bbf.filter(*m_ptr);
-	return S_OK;
-}
-
 STDMETHODIMP GdiBitmap::Clone(float x, float y, float w, float h, IGdiBitmap** pp)
 {
 	if (!m_ptr || !pp) return E_POINTER;
@@ -2559,7 +2358,7 @@ STDMETHODIMP GdiBitmap::CreateRawBitmap(IGdiRawBitmap** pp)
 	return S_OK;
 }
 
-STDMETHODIMP GdiBitmap::GetColorScheme(UINT count, VARIANT* outArray)
+STDMETHODIMP GdiBitmap::GetColourScheme(UINT count, VARIANT* outArray)
 {
 	if (!m_ptr || !outArray) return E_POINTER;
 
@@ -2844,11 +2643,11 @@ STDMETHODIMP GdiGraphics::CalcTextWidth(BSTR str, IGdiFont* font, UINT* p)
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::DrawEllipse(float x, float y, float w, float h, float line_width, VARIANT color)
+STDMETHODIMP GdiGraphics::DrawEllipse(float x, float y, float w, float h, float line_width, VARIANT colour)
 {
 	if (!m_ptr) return E_POINTER;
 
-	Gdiplus::Pen pen(helpers::get_color_from_variant(color), line_width);
+	Gdiplus::Pen pen(helpers::get_colour_from_variant(colour), line_width);
 	m_ptr->DrawEllipse(&pen, x, y, w, h);
 	return S_OK;
 }
@@ -2899,20 +2698,20 @@ STDMETHODIMP GdiGraphics::DrawImage(IGdiBitmap* image, float dstX, float dstY, f
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::DrawLine(float x1, float y1, float x2, float y2, float line_width, VARIANT color)
+STDMETHODIMP GdiGraphics::DrawLine(float x1, float y1, float x2, float y2, float line_width, VARIANT colour)
 {
 	if (!m_ptr) return E_POINTER;
 
-	Gdiplus::Pen pen(helpers::get_color_from_variant(color), line_width);
+	Gdiplus::Pen pen(helpers::get_colour_from_variant(colour), line_width);
 	m_ptr->DrawLine(&pen, x1, y1, x2, y2);
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::DrawPolygon(VARIANT color, float line_width, VARIANT points)
+STDMETHODIMP GdiGraphics::DrawPolygon(VARIANT colour, float line_width, VARIANT points)
 {
 	if (!m_ptr) return E_POINTER;
 
-	Gdiplus::SolidBrush br(helpers::get_color_from_variant(color));
+	Gdiplus::SolidBrush br(helpers::get_colour_from_variant(colour));
 	helpers::com_array_reader helper;
 	pfc::array_t<Gdiplus::PointF> point_array;
 
@@ -2935,27 +2734,27 @@ STDMETHODIMP GdiGraphics::DrawPolygon(VARIANT color, float line_width, VARIANT p
 		point_array[i].Y = varY.fltVal;
 	}
 
-	Gdiplus::Pen pen(helpers::get_color_from_variant(color), line_width);
+	Gdiplus::Pen pen(helpers::get_colour_from_variant(colour), line_width);
 	m_ptr->DrawPolygon(&pen, point_array.get_ptr(), point_array.get_count());
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::DrawRect(float x, float y, float w, float h, float line_width, VARIANT color)
+STDMETHODIMP GdiGraphics::DrawRect(float x, float y, float w, float h, float line_width, VARIANT colour)
 {
 	if (!m_ptr) return E_POINTER;
 
-	Gdiplus::Pen pen(helpers::get_color_from_variant(color), line_width);
+	Gdiplus::Pen pen(helpers::get_colour_from_variant(colour), line_width);
 	m_ptr->DrawRectangle(&pen, x, y, w, h);
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::DrawRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, float line_width, VARIANT color)
+STDMETHODIMP GdiGraphics::DrawRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, float line_width, VARIANT colour)
 {
 	if (!m_ptr) return E_POINTER;
 
 	if (2 * arc_width > w || 2 * arc_height > h) return E_INVALIDARG;
 
-	Gdiplus::Pen pen(helpers::get_color_from_variant(color), line_width);
+	Gdiplus::Pen pen(helpers::get_colour_from_variant(colour), line_width);
 	Gdiplus::GraphicsPath gp;
 	Gdiplus::RectF rect(x, y, w, h);
 	GetRoundRectPath(gp, rect, arc_width, arc_height);
@@ -2965,13 +2764,13 @@ STDMETHODIMP GdiGraphics::DrawRoundRect(float x, float y, float w, float h, floa
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::DrawString(BSTR str, IGdiFont* font, VARIANT color, float x, float y, float w, float h, int flags)
+STDMETHODIMP GdiGraphics::DrawString(BSTR str, IGdiFont* font, VARIANT colour, float x, float y, float w, float h, int flags)
 {
 	if (!m_ptr) return E_POINTER;
 
 	Gdiplus::Font* fn = NULL;
 	font->get__ptr((void**)&fn);
-	Gdiplus::SolidBrush br(helpers::get_color_from_variant(color));
+	Gdiplus::SolidBrush br(helpers::get_colour_from_variant(colour));
 	Gdiplus::StringFormat fmt(Gdiplus::StringFormat::GenericTypographic());
 
 	if (flags != 0)
@@ -3025,31 +2824,31 @@ STDMETHODIMP GdiGraphics::EstimateLineWrap(BSTR str, IGdiFont* font, int max_wid
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::FillEllipse(float x, float y, float w, float h, VARIANT color)
+STDMETHODIMP GdiGraphics::FillEllipse(float x, float y, float w, float h, VARIANT colour)
 {
 	if (!m_ptr) return E_POINTER;
 
-	Gdiplus::SolidBrush br(helpers::get_color_from_variant(color));
+	Gdiplus::SolidBrush br(helpers::get_colour_from_variant(colour));
 	m_ptr->FillEllipse(&br, x, y, w, h);
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::FillGradRect(float x, float y, float w, float h, float angle, VARIANT color1, VARIANT color2, float focus)
+STDMETHODIMP GdiGraphics::FillGradRect(float x, float y, float w, float h, float angle, VARIANT colour1, VARIANT colour2, float focus)
 {
 	if (!m_ptr) return E_POINTER;
 
 	Gdiplus::RectF rect(x, y, w, h);
-	Gdiplus::LinearGradientBrush brush(rect, helpers::get_color_from_variant(color1), helpers::get_color_from_variant(color2), angle, TRUE);
+	Gdiplus::LinearGradientBrush brush(rect, helpers::get_colour_from_variant(colour1), helpers::get_colour_from_variant(colour2), angle, TRUE);
 	brush.SetBlendTriangularShape(focus);
 	m_ptr->FillRectangle(&brush, rect);
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::FillPolygon(VARIANT color, int fillmode, VARIANT points)
+STDMETHODIMP GdiGraphics::FillPolygon(VARIANT colour, int fillmode, VARIANT points)
 {
 	if (!m_ptr) return E_POINTER;
 
-	Gdiplus::SolidBrush br(helpers::get_color_from_variant(color));
+	Gdiplus::SolidBrush br(helpers::get_colour_from_variant(colour));
 	helpers::com_array_reader helper;
 	pfc::array_t<Gdiplus::PointF> point_array;
 
@@ -3076,13 +2875,13 @@ STDMETHODIMP GdiGraphics::FillPolygon(VARIANT color, int fillmode, VARIANT point
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::FillRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, VARIANT color)
+STDMETHODIMP GdiGraphics::FillRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, VARIANT colour)
 {
 	if (!m_ptr) return E_POINTER;
 
 	if (2 * arc_width > w || 2 * arc_height > h) return E_INVALIDARG;
 
-	Gdiplus::SolidBrush br(helpers::get_color_from_variant(color));
+	Gdiplus::SolidBrush br(helpers::get_colour_from_variant(colour));
 	Gdiplus::GraphicsPath gp;
 	Gdiplus::RectF rect(x, y, w, h);
 	GetRoundRectPath(gp, rect, arc_width, arc_height);
@@ -3090,11 +2889,11 @@ STDMETHODIMP GdiGraphics::FillRoundRect(float x, float y, float w, float h, floa
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::FillSolidRect(float x, float y, float w, float h, VARIANT color)
+STDMETHODIMP GdiGraphics::FillSolidRect(float x, float y, float w, float h, VARIANT colour)
 {
 	if (!m_ptr) return E_POINTER;
 
-	Gdiplus::SolidBrush brush(helpers::get_color_from_variant(color));
+	Gdiplus::SolidBrush brush(helpers::get_colour_from_variant(colour));
 	m_ptr->FillRectangle(&brush, x, y, w, h);
 	return S_OK;
 }
@@ -3136,7 +2935,7 @@ STDMETHODIMP GdiGraphics::GdiDrawBitmap(IGdiRawBitmap* bitmap, int dstX, int dst
 	return S_OK;
 }
 
-STDMETHODIMP GdiGraphics::GdiDrawText(BSTR str, IGdiFont* font, VARIANT color, int x, int y, int w, int h, int format, VARIANT* p)
+STDMETHODIMP GdiGraphics::GdiDrawText(BSTR str, IGdiFont* font, VARIANT colour, int x, int y, int w, int h, int format, VARIANT* p)
 {
 	if (!m_ptr || !p) return E_POINTER;
 
@@ -3148,7 +2947,7 @@ STDMETHODIMP GdiGraphics::GdiDrawText(BSTR str, IGdiFont* font, VARIANT color, i
 	DRAWTEXTPARAMS dpt = { sizeof(DRAWTEXTPARAMS), 4, 0, 0, 0 };
 
 	oldfont = SelectFont(dc, hFont);
-	SetTextColor(dc, helpers::convert_argb_to_colorref(helpers::get_color_from_variant(color)));
+	SetTextColor(dc, helpers::convert_argb_to_colorref(helpers::get_colour_from_variant(colour)));
 	SetBkMode(dc, TRANSPARENT);
 	SetTextAlign(dc, TA_LEFT | TA_TOP | TA_NOUPDATECP);
 
@@ -3442,6 +3241,49 @@ STDMETHODIMP GdiUtils::LoadImageAsync(UINT window_id, BSTR path, UINT* p)
 	return S_OK;
 }
 
+JSConsole::JSConsole()
+{
+}
+
+JSConsole::~JSConsole()
+{
+}
+
+STDMETHODIMP JSConsole::Log(SAFEARRAY* p)
+{
+	pfc::string8_fast str;
+	LONG nLBound = 0, nUBound = -1;
+	HRESULT hr;
+
+	if (FAILED(hr = SafeArrayGetLBound(p, 1, &nLBound)))
+		return hr;
+
+	if (FAILED(hr = SafeArrayGetUBound(p, 1, &nUBound)))
+		return hr;
+
+	for (LONG i = nLBound; i <= nUBound; ++i)
+	{
+		_variant_t var;
+		LONG n = i;
+
+		if (FAILED(SafeArrayGetElement(p, &n, &var)))
+			continue;
+
+		if (FAILED(hr = VariantChangeType(&var, &var, VARIANT_ALPHABOOL, VT_BSTR)))
+			continue;
+
+		str.add_string(pfc::stringcvt::string_utf8_from_wide(var.bstrVal));
+
+		if (i < nUBound)
+		{
+			str.add_byte(' ');
+		}
+	}
+
+	console::info(str);
+	return S_OK;
+}
+
 JSUtils::JSUtils()
 {
 }
@@ -3513,14 +3355,14 @@ STDMETHODIMP JSUtils::CheckFont(BSTR name, VARIANT_BOOL* p)
 	return S_OK;
 }
 
-STDMETHODIMP JSUtils::ColorPicker(UINT window_id, int default_color, int* out_color)
+STDMETHODIMP JSUtils::ColourPicker(UINT window_id, int default_colour, int* out_colour)
 {
-	if (!out_color) return E_POINTER;
+	if (!out_colour) return E_POINTER;
 
-	COLORREF COLOR = helpers::convert_argb_to_colorref(default_color);
+	COLORREF COLOR = helpers::convert_argb_to_colorref(default_colour);
 	COLORREF COLORS[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	uChooseColor(&COLOR, (HWND)window_id, &COLORS[0]);
-	*out_color = helpers::convert_colorref_to_argb(COLOR);
+	*out_colour = helpers::convert_colorref_to_argb(COLOR);
 	return S_OK;
 }
 
@@ -3681,7 +3523,7 @@ STDMETHODIMP JSUtils::GetAlbumArtV2(IFbMetadbHandle* handle, int art_id, VARIANT
 	return helpers::get_album_art_v2(ptr, pp, art_id, need_stub);
 }
 
-STDMETHODIMP JSUtils::GetSysColor(UINT index, int* p)
+STDMETHODIMP JSUtils::GetSysColour(UINT index, int* p)
 {
 	if (!p) return E_POINTER;
 
@@ -3843,11 +3685,28 @@ STDMETHODIMP JSUtils::WriteINI(BSTR filename, BSTR section, BSTR key, VARIANT va
 	return S_OK;
 }
 
+STDMETHODIMP JSUtils::WriteTextFile(BSTR filename, BSTR content, VARIANT_BOOL* p)
+{
+	if (!p) return E_POINTER;
+
+	try
+	{
+		pfc::string8_fast filename8 = pfc::stringcvt::string_utf8_from_wide(filename);
+		pfc::string8_fast content8 = pfc::stringcvt::string_utf8_from_wide(content);
+		*p = TO_VARIANT_BOOL(helpers::write_file(filename8, content8));
+	}
+	catch (...)
+	{
+		*p = VARIANT_FALSE;
+	}
+	return S_OK;
+}
+
 STDMETHODIMP JSUtils::get_Version(UINT* v)
 {
 	if (!v) return E_POINTER;
 
-	*v = 1322;
+	*v = 2000;
 	return S_OK;
 }
 

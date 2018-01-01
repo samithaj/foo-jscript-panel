@@ -326,7 +326,7 @@ _.mixin({
 				this.update();
 				break;
 			case 3140:
-				this.properties.colour.value = utils.ColorPicker(window.ID, this.properties.colour.value);
+				this.properties.colour.value = utils.ColourPicker(window.ID, this.properties.colour.value);
 				window.Repaint();
 				break;
 			case 3150:
@@ -587,7 +587,7 @@ _.mixin({
 						break;
 					default:
 						console.log('HTTP error: ' + this.xmlhttp.status);
-						this.xmlhttp.responseText && fb.Trace(this.xmlhttp.responseText);
+						this.xmlhttp.responseText && console.log(this.xmlhttp.responseText);
 						break;
 					}
 				}
@@ -607,12 +607,12 @@ _.mixin({
 					this.mb_offset += 100;
 					this.get();
 				} else {
-					_.save(JSON.stringify(this.mb_data), f);
+					_.save(f, JSON.stringify(this.mb_data));
 					this.reset();
 				}
 				break;
 			case this.mode == 'musicbrainz': // links
-				_.save(this.xmlhttp.responseText, f);
+				_.save(f, this.xmlhttp.responseText);
 				this.reset();
 				break;
 			case this.mode == 'lastfm_info':
@@ -625,10 +625,10 @@ _.mixin({
 					if (_.get(data, 'similarartists.artist', []).length == 0) {
 						return;
 					}
-					_.save(this.xmlhttp.responseText, f);
+					_.save(f, this.xmlhttp.responseText);
 					this.reset();
 				} else {
-					_.save(this.xmlhttp.responseText, f);
+					_.save(f, this.xmlhttp.responseText);
 					this.update();
 				}
 				break;
@@ -659,7 +659,7 @@ _.mixin({
 			switch (this.mode) {
 			case 'autoplaylists':
 				this.save = function () {
-					_.save(JSON.stringify(this.data, this.replacer), this.filename);
+					_.save(this.filename, JSON.stringify(this.data, this.replacer));
 					this.update();
 				}
 				
@@ -777,17 +777,16 @@ _.mixin({
 					plman.ActivePlaylist = plman.PlaylistCount - 1;
 				}
 				
-				_.createFolder(folders.settings);
+				_.createFolder(folders.data);
 				this.editing = false;
 				this.deleted_items = [];
-				this.filename = folders.settings + 'autoplaylists.json';
+				this.filename = folders.data + 'autoplaylists.json';
 				this.update();
 				break;
 			case 'lastfm_info':
 				_.createFolder(folders.data);
-				_.createFolder(folders.lastfm);
 				_.createFolder(folders.artists);
-				_.createFolder(folders.settings);
+				_.createFolder(folders.lastfm);
 				this.ua = lastfm.ua;
 				this.methods = [{
 						method : 'user.getTopArtists',
@@ -843,7 +842,7 @@ _.mixin({
 				
 				_.createFolder(folders.data);
 				_.createFolder(folders.artists);
-				this.ua = 'foo_jscript_panel_musicbrainz +https://github.com/19379';
+				this.ua = 'foo_jscript_panel_musicbrainz +https://github.com/marc2k3';
 				this.mb_id = '';
 				this.properties = {
 					mode : new _.p('2K3.LIST.MUSICBRAINZ.MODE', 0) // 0 releases 1 links

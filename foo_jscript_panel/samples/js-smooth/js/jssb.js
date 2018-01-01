@@ -1,6 +1,3 @@
-if (!("FormatDuration" in utils))
-	fb.ShowPopupMessage("This script requires the component JScript Panel v1.0.0 or higher.\n\nhttps://github.com/19379/foo-jscript-panel/releases");
-
 images = {
 	path: fb.ComponentPath + "samples\\js-smooth\\images\\",
 	glass_reflect: null,
@@ -2510,7 +2507,7 @@ oBrowser = function (name) {
 				try {
 					gr.gdiDrawText(boxText, gdi.Font(g_fname, g_fsize - 2, 1), blendColors(g_color_normal_txt, g_color_normal_bg, 0.4), tx, 0, tw, ppt.headerBarHeight - 1, DT_RIGHT | DT_VCENTER | DT_CALCRECT | DT_NOPREFIX | DT_END_ELLIPSIS);
 				} catch (e) {
-					fb.trace(">> debug: cScrollBar.width=" + cScrollBar.width + " /boxText=" + boxText + " /ppt.headerBarHeight=" + ppt.headerBarHeight + " /g_fsize=" + g_fsize);
+					console.log(">> debug: cScrollBar.width=" + cScrollBar.width + " /boxText=" + boxText + " /ppt.headerBarHeight=" + ppt.headerBarHeight + " /g_fsize=" + g_fsize);
 				};
 			};
 
@@ -2806,7 +2803,7 @@ oBrowser = function (name) {
 					try {
 						fso.DeleteFile(fb.ProfilePath + "js_smooth_cache\\" + crc);
 					} catch (e) {
-						fb.trace("WSH Panel Error: Image cache [" + crc + "] can't be deleted on disk, file in use, try later or reload panel.");
+						console.log("WSH Panel Error: Image cache [" + crc + "] can't be deleted on disk, file in use, try later or reload panel.");
 					};
 				};
 				this.groups[albumIndex].tid = -1;
@@ -3076,11 +3073,6 @@ var g_dnd_handles = null;
 var g_dnd_status = false;
 
 var fso = new ActiveXObject("Scripting.FileSystemObject");
-var Img = new ActiveXObject("WIA.ImageFile.1");
-var IP = new ActiveXObject("WIA.ImageProcess.1");
-IP.Filters.Add(IP.FilterInfos("Scale").FilterID); //ID = 1
-IP.Filters.Add(IP.FilterInfos("Crop").FilterID); //ID = 2
-IP.Filters.Add(IP.FilterInfos("Convert").FilterID); //ID = 3
 var WshShell = new ActiveXObject("WScript.Shell");
 var htmlfile = new ActiveXObject('htmlfile');
 
@@ -3672,7 +3664,7 @@ function get_font() {
 		g_fsize = default_font.Size;
 		g_fstyle = default_font.Style;
 	} catch (e) {
-		fb.trace("WSH Panel Error: Unable to use the default font. Using Arial font instead.");
+		console.log("WSH Panel Error: Unable to use the default font. Using Arial font instead.");
 		g_fname = "arial";
 		g_fsize = 12;
 		g_fstyle = 0;
@@ -3703,10 +3695,10 @@ function get_font() {
 function get_colors() {
 	var arr;
 	// get some system colors
-	g_syscolor_window_bg = utils.GetSysColor(COLOR_WINDOW);
-	g_syscolor_highlight = utils.GetSysColor(COLOR_HIGHLIGHT);
-	g_syscolor_button_bg = utils.GetSysColor(COLOR_BTNFACE);
-	g_syscolor_button_txt = utils.GetSysColor(COLOR_BTNTEXT);
+	g_syscolor_window_bg = utils.GetSysColour(COLOR_WINDOW);
+	g_syscolor_highlight = utils.GetSysColour(COLOR_HIGHLIGHT);
+	g_syscolor_button_bg = utils.GetSysColour(COLOR_BTNFACE);
+	g_syscolor_button_txt = utils.GetSysColour(COLOR_BTNTEXT);
 
 	arr = window.GetProperty("CUSTOM COLOR TEXT NORMAL", "180-180-180").split("-");
 	g_color_normal_txt = RGB(arr[0], arr[1], arr[2]);
@@ -3723,17 +3715,17 @@ function get_colors() {
 	if (!ppt.enableCustomColors) {
 		// get UI colors set in UI Preferences if no custom color set
 		if (g_instancetype == 0) {
-			g_color_normal_txt = window.GetColorCUI(ColorTypeCUI.text);
-			g_color_selected_txt = window.GetColorCUI(ColorTypeCUI.selection_text);
-			g_color_normal_bg = window.GetColorCUI(ColorTypeCUI.background);
-			g_color_selected_bg = window.GetColorCUI(ColorTypeCUI.selection_background);
-			g_color_highlight = window.GetColorCUI(ColorTypeCUI.active_item_frame);
+			g_color_normal_txt = window.GetColourCUI(ColorTypeCUI.text);
+			g_color_selected_txt = window.GetColourCUI(ColorTypeCUI.selection_text);
+			g_color_normal_bg = window.GetColourCUI(ColorTypeCUI.background);
+			g_color_selected_bg = window.GetColourCUI(ColorTypeCUI.selection_background);
+			g_color_highlight = window.GetColourCUI(ColorTypeCUI.active_item_frame);
 		} else if (g_instancetype == 1) {
-			g_color_normal_txt = window.GetColorDUI(ColorTypeDUI.text);
-			g_color_selected_txt = window.GetColorDUI(ColorTypeDUI.selection);
-			g_color_normal_bg = window.GetColorDUI(ColorTypeDUI.background);
+			g_color_normal_txt = window.GetColourDUI(ColorTypeDUI.text);
+			g_color_selected_txt = window.GetColourDUI(ColorTypeDUI.selection);
+			g_color_normal_bg = window.GetColourDUI(ColorTypeDUI.background);
 			g_color_selected_bg = g_color_selected_txt;
-			g_color_highlight = window.GetColorDUI(ColorTypeDUI.highlight);
+			g_color_highlight = window.GetColourDUI(ColorTypeDUI.highlight);
 		};
 	};
 };
@@ -3744,7 +3736,7 @@ function on_font_changed() {
 	brw.repaint();
 };
 
-function on_colors_changed() {
+function on_colours_changed() {
 	get_colors();
 	get_images();
 	if (brw)
@@ -4071,7 +4063,6 @@ function on_playlist_items_removed(playlist_idx, new_count) {
 };
 
 function on_playlist_items_reordered(playlist_idx) {
-	//fb.trace("items_reordered");
 	if (ppt.sourceMode == 1) {
 		if (playlist_idx == g_active_playlist) {
 			brw.populate(is_first_populate = true);

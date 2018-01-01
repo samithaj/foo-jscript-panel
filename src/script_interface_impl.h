@@ -61,7 +61,7 @@ protected:
 public:
 	STDMETHODIMP BuildMenu(IMenuObj* p, int base_id, int max_id);
 	STDMETHODIMP ExecuteByID(UINT id, VARIANT_BOOL* p);
-	STDMETHODIMP InitContext(VARIANT handle);
+	STDMETHODIMP InitContext(IFbMetadbHandleList* handles);
 	STDMETHODIMP InitNowPlaying();
 };
 
@@ -218,15 +218,13 @@ public:
 	STDMETHODIMP ClearPlaylist(UINT playlistIndex);
 	STDMETHODIMP ClearPlaylistSelection(UINT playlistIndex);
 	STDMETHODIMP CreateAutoPlaylist(UINT idx, BSTR name, BSTR query, BSTR sort, UINT flags, int* p);
-	STDMETHODIMP CreatePlaybackQueueItem(IFbPlaybackQueueItem** outPlaybackQueueItem);
 	STDMETHODIMP CreatePlaylist(UINT playlistIndex, BSTR name, UINT* outPlaylistIndex);
 	STDMETHODIMP DuplicatePlaylist(UINT from, BSTR name, UINT* outPlaylistIndex);
 	STDMETHODIMP EnsurePlaylistItemVisible(UINT playlistIndex, UINT itemIndex);
 	STDMETHODIMP ExecutePlaylistDefaultAction(UINT playlistIndex, UINT playlistItemIndex, VARIANT_BOOL* outSuccess);
 	STDMETHODIMP FindPlaybackQueueItemIndex(IFbMetadbHandle* handle, UINT playlistIndex, UINT playlistItemIndex, int* outIndex);
 	STDMETHODIMP FlushPlaybackQueue();
-	STDMETHODIMP GetPlaybackQueueContents(VARIANT* outContents);
-	STDMETHODIMP GetPlaybackQueueCount(UINT* outCount);
+	STDMETHODIMP GetPlaybackQueueHandles(IFbMetadbHandleList** outItems);
 	STDMETHODIMP GetPlayingItemLocation(IFbPlayingItemLocation** outPlayingLocation);
 	STDMETHODIMP GetPlaylistFocusItemIndex(UINT playlistIndex, int* outPlaylistItemIndex);
 	STDMETHODIMP GetPlaylistItems(UINT playlistIndex, IFbMetadbHandleList** outItems);
@@ -235,7 +233,6 @@ public:
 	STDMETHODIMP InsertPlaylistItems(UINT playlistIndex, UINT base, IFbMetadbHandleList* handles, VARIANT_BOOL select);
 	STDMETHODIMP InsertPlaylistItemsFilter(UINT playlistIndex, UINT base, IFbMetadbHandleList* handles, VARIANT_BOOL select);
 	STDMETHODIMP IsAutoPlaylist(UINT idx, VARIANT_BOOL* p);
-	STDMETHODIMP IsPlaybackQueueActive(VARIANT_BOOL* outIsActive);
 	STDMETHODIMP IsPlaylistItemSelected(UINT playlistIndex, UINT playlistItemIndex, VARIANT_BOOL* outSelected);
 	STDMETHODIMP IsPlaylistLocked(UINT playlistIndex, VARIANT_BOOL* p);
 	STDMETHODIMP MovePlaylist(UINT from, UINT to, VARIANT_BOOL* outSuccess);
@@ -267,27 +264,6 @@ public:
 
 private:
 	IFbPlaylistRecyclerManagerPtr m_fbPlaylistRecyclerManager;
-};
-
-class FbPlaybackQueueItem : public IDisposableImpl4<IFbPlaybackQueueItem>
-{
-protected:
-	t_playback_queue_item m_playback_queue_item;
-
-	FbPlaybackQueueItem();
-	FbPlaybackQueueItem(const t_playback_queue_item& playbackQueueItem);
-	virtual ~FbPlaybackQueueItem();
-	virtual void FinalRelease();
-
-public:
-	STDMETHODIMP Equals(IFbPlaybackQueueItem* item, VARIANT_BOOL* outEquals);
-	STDMETHODIMP get_Handle(IFbMetadbHandle** outHandle);
-	STDMETHODIMP get_PlaylistIndex(UINT* outPlaylistIndex);
-	STDMETHODIMP get_PlaylistItemIndex(UINT* outItemIndex);
-	STDMETHODIMP get__ptr(void** pp);
-	STDMETHODIMP put_Handle(IFbMetadbHandle* handle);
-	STDMETHODIMP put_PlaylistIndex(UINT playlistIndex);
-	STDMETHODIMP put_PlaylistItemIndex(UINT itemIndex);
 };
 
 class FbPlayingItemLocation : public IDispatchImpl3<IFbPlayingItemLocation>
@@ -443,7 +419,6 @@ public:
 	STDMETHODIMP ShowPreferences();
 	STDMETHODIMP Stop();
 	STDMETHODIMP TitleFormat(BSTR expression, IFbTitleFormat** pp);
-	STDMETHODIMP Trace(SAFEARRAY* p);
 	STDMETHODIMP VolumeDown();
 	STDMETHODIMP VolumeMute();
 	STDMETHODIMP VolumeUp();
@@ -477,10 +452,9 @@ protected:
 public:
 	STDMETHODIMP ApplyAlpha(BYTE alpha, IGdiBitmap** pp);
 	STDMETHODIMP ApplyMask(IGdiBitmap* mask, VARIANT_BOOL* p);
-	STDMETHODIMP BoxBlur(int radius, int iteration);
 	STDMETHODIMP Clone(float x, float y, float w, float h, IGdiBitmap** pp);
 	STDMETHODIMP CreateRawBitmap(IGdiRawBitmap** pp);
-	STDMETHODIMP GetColorScheme(UINT count, VARIANT* outArray);
+	STDMETHODIMP GetColourScheme(UINT count, VARIANT* outArray);
 	STDMETHODIMP GetGraphics(IGdiGraphics** pp);
 	STDMETHODIMP ReleaseGraphics(IGdiGraphics* p);
 	STDMETHODIMP Resize(UINT w, UINT h, int interpolationMode, IGdiBitmap** pp);
@@ -523,22 +497,22 @@ public:
 
 	STDMETHODIMP CalcTextHeight(BSTR str, IGdiFont* font, UINT* p);
 	STDMETHODIMP CalcTextWidth(BSTR str, IGdiFont* font, UINT* p);
-	STDMETHODIMP DrawEllipse(float x, float y, float w, float h, float line_width, VARIANT color);
+	STDMETHODIMP DrawEllipse(float x, float y, float w, float h, float line_width, VARIANT colour);
 	STDMETHODIMP DrawImage(IGdiBitmap* image, float dstX, float dstY, float dstW, float dstH, float srcX, float srcY, float srcW, float srcH, float angle, BYTE alpha);
-	STDMETHODIMP DrawLine(float x1, float y1, float x2, float y2, float line_width, VARIANT color);
-	STDMETHODIMP DrawPolygon(VARIANT color, float line_width, VARIANT points);
-	STDMETHODIMP DrawRect(float x, float y, float w, float h, float line_width, VARIANT color);
-	STDMETHODIMP DrawRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, float line_width, VARIANT color);
-	STDMETHODIMP DrawString(BSTR str, IGdiFont* font, VARIANT color, float x, float y, float w, float h, int flags);
+	STDMETHODIMP DrawLine(float x1, float y1, float x2, float y2, float line_width, VARIANT colour);
+	STDMETHODIMP DrawPolygon(VARIANT colour, float line_width, VARIANT points);
+	STDMETHODIMP DrawRect(float x, float y, float w, float h, float line_width, VARIANT colour);
+	STDMETHODIMP DrawRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, float line_width, VARIANT colour);
+	STDMETHODIMP DrawString(BSTR str, IGdiFont* font, VARIANT colour, float x, float y, float w, float h, int flags);
 	STDMETHODIMP EstimateLineWrap(BSTR str, IGdiFont* font, int max_width, VARIANT* p);
-	STDMETHODIMP FillEllipse(float x, float y, float w, float h, VARIANT color);
-	STDMETHODIMP FillGradRect(float x, float y, float w, float h, float angle, VARIANT color1, VARIANT color2, float focus);
-	STDMETHODIMP FillPolygon(VARIANT color, int fillmode, VARIANT points);
-	STDMETHODIMP FillRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, VARIANT color);
-	STDMETHODIMP FillSolidRect(float x, float y, float w, float h, VARIANT color);
+	STDMETHODIMP FillEllipse(float x, float y, float w, float h, VARIANT colour);
+	STDMETHODIMP FillGradRect(float x, float y, float w, float h, float angle, VARIANT colour1, VARIANT colour2, float focus);
+	STDMETHODIMP FillPolygon(VARIANT colour, int fillmode, VARIANT points);
+	STDMETHODIMP FillRoundRect(float x, float y, float w, float h, float arc_width, float arc_height, VARIANT colour);
+	STDMETHODIMP FillSolidRect(float x, float y, float w, float h, VARIANT colour);
 	STDMETHODIMP GdiAlphaBlend(IGdiRawBitmap* bitmap, int dstX, int dstY, int dstW, int dstH, int srcX, int srcY, int srcW, int srcH, BYTE alpha);
 	STDMETHODIMP GdiDrawBitmap(IGdiRawBitmap* bitmap, int dstX, int dstY, int dstW, int dstH, int srcX, int srcY, int srcW, int srcH);
-	STDMETHODIMP GdiDrawText(BSTR str, IGdiFont* font, VARIANT color, int x, int y, int w, int h, int format, VARIANT* p);
+	STDMETHODIMP GdiDrawText(BSTR str, IGdiFont* font, VARIANT colour, int x, int y, int w, int h, int format, VARIANT* p);
 	STDMETHODIMP MeasureString(BSTR str, IGdiFont* font, float x, float y, float w, float h, int flags, IMeasureStringInfo** pp);
 	STDMETHODIMP SetInterpolationMode(INT mode);
 	STDMETHODIMP SetSmoothingMode(INT mode);
@@ -576,6 +550,16 @@ public:
 	STDMETHODIMP LoadImageAsync(UINT window_id, BSTR path, UINT* p);
 };
 
+class JSConsole : public IDispatchImpl3<IJSConsole>
+{
+protected:
+	JSConsole();
+	virtual ~JSConsole();
+
+public:
+	STDMETHODIMP Log(SAFEARRAY* p);
+};
+
 class JSUtils : public IDispatchImpl3<IJSUtils>
 {
 protected:
@@ -585,14 +569,14 @@ protected:
 public:
 	STDMETHODIMP CheckComponent(BSTR name, VARIANT_BOOL is_dll, VARIANT_BOOL* p);
 	STDMETHODIMP CheckFont(BSTR name, VARIANT_BOOL* p);
-	STDMETHODIMP ColorPicker(UINT window_id, int default_color, int* out_color);
+	STDMETHODIMP ColourPicker(UINT window_id, int default_colour, int* out_colour);
 	STDMETHODIMP FileTest(BSTR path, BSTR mode, VARIANT* p);
 	STDMETHODIMP FormatDuration(double p, BSTR* pp);
 	STDMETHODIMP FormatFileSize(LONGLONG p, BSTR* pp);
 	STDMETHODIMP GetAlbumArtAsync(UINT window_id, IFbMetadbHandle* handle, int art_id, VARIANT_BOOL need_stub, VARIANT_BOOL only_embed, VARIANT_BOOL no_load, UINT* p);
 	STDMETHODIMP GetAlbumArtEmbedded(BSTR rawpath, int art_id, IGdiBitmap** pp);
 	STDMETHODIMP GetAlbumArtV2(IFbMetadbHandle* handle, int art_id, VARIANT_BOOL need_stub, IGdiBitmap** pp);
-	STDMETHODIMP GetSysColor(UINT index, int* p);
+	STDMETHODIMP GetSysColour(UINT index, int* p);
 	STDMETHODIMP GetSystemMetrics(UINT index, int* p);
 	STDMETHODIMP Glob(BSTR pattern, UINT exc_mask, UINT inc_mask, VARIANT* p);
 	STDMETHODIMP IsKeyPressed(UINT vkey, VARIANT_BOOL* p);
@@ -601,6 +585,7 @@ public:
 	STDMETHODIMP ReadINI(BSTR filename, BSTR section, BSTR key, VARIANT defaultval, BSTR* pp);
 	STDMETHODIMP ReadTextFile(BSTR filename, UINT codepage, BSTR* pp);
 	STDMETHODIMP WriteINI(BSTR filename, BSTR section, BSTR key, VARIANT val, VARIANT_BOOL* p);
+	STDMETHODIMP WriteTextFile(BSTR filename, BSTR content, VARIANT_BOOL* p);
 	STDMETHODIMP get_Version(UINT* v);
 };
 

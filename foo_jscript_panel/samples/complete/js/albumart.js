@@ -3,20 +3,20 @@ _.mixin({
 		this.paint = function (gr) {
 			if (this.properties.cd.enabled) {
 				if (this.properties.shadow.enabled) {
-					_.drawImage(gr, this.shadow_img, this.x, this.y, this.w, this.h);
+					_.drawImage(gr, this.images.shadow, this.x, this.y, this.w, this.h);
 				}
-				_.drawImage(gr, this.case_img, this.x, this.y, this.w, this.h);
+				_.drawImage(gr, this.images.case, this.x, this.y, this.w, this.h);
 				if (this.img) {
-					var ratio = Math.min(this.w / this.case_img.Width, this.h / this.case_img.Height);
+					var ratio = Math.min(this.w / this.images.case.Width, this.h / this.images.case.Height);
 					var nw = 488 * ratio;
 					var nh = 476 * ratio;
 					var nx = this.x + Math.floor((this.w - (452 * ratio)) / 2);
 					var ny = this.y + Math.floor((this.h - nh) / 2);
 					_.drawImage(gr, this.img, nx, ny, nw, nh, this.properties.aspect.value);
 				}
-				_.drawImage(gr, this.semi_img, this.x, this.y, this.w, this.h);
+				_.drawImage(gr, this.images.semi, this.x, this.y, this.w, this.h);
 				if (this.properties.gloss.enabled) {
-					_.drawImage(gr, this.gloss_img, this.x, this.y, this.w, this.h);
+					_.drawImage(gr, this.images.gloss, this.x, this.y, this.w, this.h);
 				}
 			} else if (this.img) {
 				_.drawImage(gr, this.img, this.x, this.y, this.w, this.h, this.properties.aspect.value);
@@ -192,14 +192,16 @@ _.mixin({
 		this.mx = 0;
 		this.my = 0;
 		this.tooltip = '';
-		this.ids = ['Front', 'Back', 'Disc', 'Icon', 'Artist'];
-		this.shadow_img = _.img('cd\\shadow.png');
-		this.case_img = _.img('cd\\case.png');
-		this.semi_img = _.img('cd\\semi.png');
-		this.gloss_img = _.img('cd\\gloss.png');
 		this.img = null;
 		this.path = null;
 		this.hover = false;
+		this.ids = ['Front', 'Back', 'Disc', 'Icon', 'Artist'];
+		this.images = {
+			shadow : _.img('cd\\shadow.png'),
+			case : _.img('cd\\case.png'),
+			semi : _.img('cd\\semi.png'),
+			gloss : _.img('cd\\gloss.png')
+		};
 		this.properties = {
 			aspect : new _.p('2K3.ARTREADER.ASPECT', image.crop),
 			gloss : new _.p('2K3.ARTREADER.GLOSS', false),

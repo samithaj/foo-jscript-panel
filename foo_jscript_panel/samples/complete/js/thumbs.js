@@ -548,7 +548,6 @@ _.mixin({
 		
 		_.createFolder(folders.data);
 		_.createFolder(folders.artists);
-		_.createFolder(folders.settings);
 		this.mx = 0;
 		this.my = 0;
 		this.files = [];
@@ -556,8 +555,8 @@ _.mixin({
 		this.limits = [1, 3, 5, 10, 15, 20];
 		this.modes = ['grid', 'left', 'right', 'top', 'bottom', 'off'];
 		this.pxs = [75, 100, 150, 200, 250, 300];
-		this.ini_file = folders.settings + 'thumbs.ini';
-		this.vbs_file = fb.ComponentPath + 'samples\\complete\\vbs\\download.vbs';
+		this.ini_file = folders.data + 'thumbs.ini';
+		this.vbs_file = folders.home + 'vbs\\download.vbs';
 		this.exts = 'jpg|jpeg|png|gif';
 		this.folder = '';
 		this.default_file = '';

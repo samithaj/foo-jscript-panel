@@ -14,7 +14,7 @@ If you have Microsoft Office installed, you should have the wingdings fonts. If 
 search for them.
 
 The "js-smooth" folder contains Br3tt's "JS Smooth Playlist", "JS Smooth Browser" and
-"JS Smooth Playlist Manager" scripts, all updated to be compatible with JScript Panel v1.2 and
+"JS Smooth Playlist Manager" scripts, all updated to be compatible with JScript Panel v2 and
 later. For previous users, the cache folder location has changed so you may delete the old "js_br3tt"
 folder.
 

@@ -25,7 +25,7 @@ var seekbar = new _.seekbar(0, 0, 0, 0);
 var buttons = new _.buttons();
 var img = null;
 var bs = _.scale(24);
-on_playback_new_track();
+on_playback_new_track(fb.GetNowPlaying());
 
 buttons.update = function () {
 	var y = Math.round((panel.h - bs) / 2);
@@ -69,8 +69,7 @@ function on_paint(gr) {
 	gr.DrawRect(seekbar.x, seekbar.y, seekbar.w + _.scale(6), seekbar.h, 1, colours.seekbar_progress);
 }
 
-function on_playback_new_track() {
-	var metadb = fb.GetNowPlaying();
+function on_playback_new_track(metadb) {
 	if (!metadb) {
 		return;
 	}

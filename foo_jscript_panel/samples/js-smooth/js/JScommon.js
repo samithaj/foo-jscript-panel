@@ -1,3 +1,6 @@
+if (!("Version" in utils) || utils.Version < 2000)
+	fb.ShowPopupMessage("This script requires the component JScript Panel v2.0.0 or later.\n\nhttps://github.com/marc2k3/foo_jscript_panel");
+
 // *****************************************************************************************************************************************
 // Common functions & flags by Br3tt aka Falstaff (c)2013-2015
 // *****************************************************************************************************************************************
@@ -1004,7 +1007,7 @@ WindowState = {
 function on_load() {
 	if (!fso.FileExists(fb.ProfilePath + "js_smooth_cache\\LoadIMG.js")) {
 		var data = "var fso = new ActiveXObject(\"Scripting.FileSystemObject\");\r\n"
-			 + "var Img = new ActiveXObject(\"WIA.ImageFile.1\");\r\n"
+			 + "try { var Img = new ActiveXObject(\"WIA.ImageFile.1\") } catch(e) {WScript.Quit()};\r\n"
 			 + "var IP = new ActiveXObject(\"WIA.ImageProcess.1\");\r\n"
 			 + "IP.Filters.Add(IP.FilterInfos(\"Scale\").FilterID);//ID = 1\r\n"
 			 + "IP.Filters.Add(IP.FilterInfos(\"Crop\").FilterID);//ID = 2\r\n"
