@@ -1,4 +1,5 @@
 # foo_jscript_panel
+JScript Panel v2
 
 This is a component for the [foobar2000](https://www.foobar2000.org)
 audio player. It is based on [WSH Panel Mod](https://code.google.com/archive/p/foo-wsh-panel-mod/). 
@@ -6,10 +7,12 @@ audio player. It is based on [WSH Panel Mod](https://code.google.com/archive/p/f
 It allows the creation of customisable panels that can be written
 with `Javascript` rather than the `C++` required by the [foobar2000 SDK](https://www.foobar2000.org/SDK).
 
-Under the hood, it uses `Windows Script host` so the latest language support it has is
-`ECMAScript5`. It won't ever be updated to use anything more modern. It is possible to
-use `ActiveX` objects like `FileSystemObject` and `XMLHttpRequest` to work with the
-local file system, access the internet, etc.
+Under the hood, it uses `Windows Script host`. It is possible to use `ActiveX` objects like
+`FileSystemObject` and `XMLHttpRequest` to work with the local file system, access the internet, etc.
+
+If your system has IE9 or later installed, you'll have access to ECMAScript 5 features. You'll
+need to make sure the 'Chakra' script engine is selected in the configuration window. As of
+v2, Windows XP is now supported and support for Vista/7/WINE with IE7/IE8 has been restored.
 
 Here are just some of the features provided by the component...
 
@@ -29,18 +32,4 @@ Here are just some of the features provided by the component...
   text/json files/etc.
 * And much more...
 
-## Update 22/09/2017
-
-As of `v1.3.0`, `Internet Explorer 9` or later is now a requirement. Thanks to the
-[TheQwertiest](https://github.com/TheQwertiest), newer `ECMAScript5` features
-are now available. They are documented here:
-
-https://msdn.microsoft.com/library/ff974378.aspx#_ecmascript
-
-___
-
-[Requirements & Installation](https://github.com/19379/foo-jscript-panel/wiki/Requirements-&-Installation)
-
-[Changelog](https://github.com/19379/foo-jscript-panel/blob/master/CHANGELOG.md)
-
-[Discussion thread @ hydrogenaud.io](https://hydrogenaud.io/index.php/topic,110499.0.html)
+To get started, see the [wiki](https://github.com/marc2k3/foo_jscript_panel/wiki).
